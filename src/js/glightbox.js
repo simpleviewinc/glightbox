@@ -51,8 +51,6 @@ const defaults = {
     closeOnOutsideClick: true,
     plugins: false,
     plyr: {
-        css: 'https://cdn.plyr.io/3.6.12/plyr.css',
-        js: 'https://cdn.plyr.io/3.6.12/plyr.js',
         config: {
             ratio: '16:9', // or '4:3'
             fullscreen: { enabled: true, iosNative: true },

@@ -7,17 +7,11 @@
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
-    if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
-      _typeof = function (obj) {
-        return typeof obj;
-      };
-    } else {
-      _typeof = function (obj) {
-        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-      };
-    }
-
-    return _typeof(obj);
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) {
+      return typeof obj;
+    } : function (obj) {
+      return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    }, _typeof(obj);
   }
 
   function _classCallCheck(instance, Constructor) {
@@ -39,6 +33,9 @@
   function _createClass(Constructor, protoProps, staticProps) {
     if (protoProps) _defineProperties(Constructor.prototype, protoProps);
     if (staticProps) _defineProperties(Constructor, staticProps);
+    Object.defineProperty(Constructor, "prototype", {
+      writable: false
+    });
     return Constructor;
   }
 
@@ -379,99 +376,6 @@
         clearInterval(intervalPointer);
       }, timeout);
     }
-  }
-  function injectAssets(url, waitFor, callback) {
-    if (isNil(url)) {
-      console.error('Inject assets error');
-      return;
-    }
-
-    if (isFunction(waitFor)) {
-      callback = waitFor;
-      waitFor = false;
-    }
-
-    if (isString(waitFor) && waitFor in window) {
-      if (isFunction(callback)) {
-        callback();
-      }
-
-      return;
-    }
-
-    var found;
-
-    if (url.indexOf('.css') !== -1) {
-      found = document.querySelectorAll('link[href="' + url + '"]');
-
-      if (found && found.length > 0) {
-        if (isFunction(callback)) {
-          callback();
-        }
-
-        return;
-      }
-
-      var head = document.getElementsByTagName('head')[0];
-      var headStyles = head.querySelectorAll('link[rel="stylesheet"]');
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.type = 'text/css';
-      link.href = url;
-      link.media = 'all';
-
-      if (headStyles) {
-        head.insertBefore(link, headStyles[0]);
-      } else {
-        head.appendChild(link);
-      }
-
-      if (isFunction(callback)) {
-        callback();
-      }
-
-      return;
-    }
-
-    found = document.querySelectorAll('script[src="' + url + '"]');
-
-    if (found && found.length > 0) {
-      if (isFunction(callback)) {
-        if (isString(waitFor)) {
-          waitUntil(function () {
-            return typeof window[waitFor] !== 'undefined';
-          }, function () {
-            callback();
-          });
-          return false;
-        }
-
-        callback();
-      }
-
-      return;
-    }
-
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = url;
-
-    script.onload = function () {
-      if (isFunction(callback)) {
-        if (isString(waitFor)) {
-          waitUntil(function () {
-            return typeof window[waitFor] !== 'undefined';
-          }, function () {
-            callback();
-          });
-          return false;
-        }
-
-        callback();
-      }
-    };
-
-    document.body.appendChild(script);
   }
   function isMobile() {
     return 'navigator' in window && window.navigator.userAgent.match(/(iPad)|(iPhone)|(iPod)|(Android)|(PlayBook)|(BB10)|(BlackBerry)|(Opera Mini)|(IEMobile)|(webOS)|(MeeGo)/i);
@@ -1785,56 +1689,54 @@
     addClass(slideContainer, 'gvideo-container');
     slideMedia.insertBefore(createHTML('<div class="gvideo-wrapper"></div>'), slideMedia.firstChild);
     var videoWrapper = slide.querySelector('.gvideo-wrapper');
-    injectAssets(this.settings.plyr.css, 'Plyr');
     var url = data.href;
     var provider = data === null || data === void 0 ? void 0 : data.videoProvider;
     var customPlaceholder = false;
     slideMedia.style.maxWidth = data.width;
-    injectAssets(this.settings.plyr.js, 'Plyr', function () {
-      if (!provider && url.match(/vimeo\.com\/([0-9]*)/)) {
-        provider = 'vimeo';
+
+    if (!provider && url.match(/vimeo\.com\/([0-9]*)/)) {
+      provider = 'vimeo';
+    }
+
+    if (!provider && (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/))) {
+      provider = 'youtube';
+    }
+
+    if (provider === 'local' || !provider) {
+      provider = 'local';
+      var html = '<video id="' + videoID + '" ';
+      html += "style=\"background:#000; max-width: ".concat(data.width, ";\" ");
+      html += 'preload="metadata" ';
+      html += 'x-webkit-airplay="allow" ';
+      html += 'playsinline ';
+      html += 'controls ';
+      html += 'class="gvideo-local">';
+      html += "<source src=\"".concat(url, "\">");
+      html += '</video>';
+      customPlaceholder = createHTML(html);
+    }
+
+    var placeholder = customPlaceholder ? customPlaceholder : createHTML("<div id=\"".concat(videoID, "\" data-plyr-provider=\"").concat(provider, "\" data-plyr-embed-id=\"").concat(url, "\"></div>"));
+    addClass(videoWrapper, "".concat(provider, "-video gvideo"));
+    videoWrapper.appendChild(placeholder);
+    videoWrapper.setAttribute('data-id', videoID);
+    videoWrapper.setAttribute('data-index', index);
+    var playerConfig = has(this.settings.plyr, 'config') ? this.settings.plyr.config : {};
+    var player = new Plyr('#' + videoID, playerConfig);
+    player.on('ready', function (event) {
+      videoPlayers[videoID] = event.detail.plyr;
+
+      if (isFunction(callback)) {
+        callback();
       }
-
-      if (!provider && (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/))) {
-        provider = 'youtube';
-      }
-
-      if (provider === 'local' || !provider) {
-        provider = 'local';
-        var html = '<video id="' + videoID + '" ';
-        html += "style=\"background:#000; max-width: ".concat(data.width, ";\" ");
-        html += 'preload="metadata" ';
-        html += 'x-webkit-airplay="allow" ';
-        html += 'playsinline ';
-        html += 'controls ';
-        html += 'class="gvideo-local">';
-        html += "<source src=\"".concat(url, "\">");
-        html += '</video>';
-        customPlaceholder = createHTML(html);
-      }
-
-      var placeholder = customPlaceholder ? customPlaceholder : createHTML("<div id=\"".concat(videoID, "\" data-plyr-provider=\"").concat(provider, "\" data-plyr-embed-id=\"").concat(url, "\"></div>"));
-      addClass(videoWrapper, "".concat(provider, "-video gvideo"));
-      videoWrapper.appendChild(placeholder);
-      videoWrapper.setAttribute('data-id', videoID);
-      videoWrapper.setAttribute('data-index', index);
-      var playerConfig = has(_this.settings.plyr, 'config') ? _this.settings.plyr.config : {};
-      var player = new Plyr('#' + videoID, playerConfig);
-      player.on('ready', function (event) {
-        videoPlayers[videoID] = event.detail.plyr;
-
-        if (isFunction(callback)) {
-          callback();
-        }
-      });
-      waitUntil(function () {
-        return slide.querySelector('iframe') && slide.querySelector('iframe').dataset.ready == 'true';
-      }, function () {
-        _this.resize(slide);
-      });
-      player.on('enterfullscreen', handleMediaFullScreen);
-      player.on('exitfullscreen', handleMediaFullScreen);
     });
+    waitUntil(function () {
+      return slide.querySelector('iframe') && slide.querySelector('iframe').dataset.ready == 'true';
+    }, function () {
+      _this.resize(slide);
+    });
+    player.on('enterfullscreen', handleMediaFullScreen);
+    player.on('exitfullscreen', handleMediaFullScreen);
   }
 
   function handleMediaFullScreen(event) {
@@ -2388,7 +2290,7 @@
     return Slide;
   }();
 
-  var _version = '3.1.0';
+  var _version = '3.2.0';
 
   var isMobile$1 = isMobile();
 
@@ -2431,8 +2333,6 @@
     closeOnOutsideClick: true,
     plugins: false,
     plyr: {
-      css: 'https://cdn.plyr.io/3.6.12/plyr.css',
-      js: 'https://cdn.plyr.io/3.6.12/plyr.js',
       config: {
         ratio: '16:9',
         fullscreen: {
